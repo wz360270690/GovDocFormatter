@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="公文 Word 自动排版"
+    Manufacturer="阿谪talk"
+    Version="1.0.9"
+    UpgradeCode="6F59644D-6D08-4F91-B15B-B58C6445232D"
+    Scope="perUser">
+    <SummaryInformation Description="公文 Word 自动排版安装包" Manufacturer="阿谪talk" />
+    <MajorUpgrade DowngradeErrorMessage="已安装更高版本的公文 Word 自动排版。" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Feature Id="MainFeature" Title="公文 Word 自动排版" Level="1">
+      <ComponentGroupRef Id="ApplicationComponents" />
+      <ComponentRef Id="ShortcutComponent" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="LocalProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="公文 Word 自动排版" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="公文 Word 自动排版" />
+    </StandardDirectory>
+    <StandardDirectory Id="DesktopFolder" />
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="ApplicationComponents" Directory="INSTALLFOLDER">
+      <Component Id="MainExecutable" Guid="*">
+        <File Id="GovDocFormatterExe" Source="$(var.AppSourceDir)\GovDocFormatter.exe" KeyPath="yes" />
+      </Component>
+      <Component Id="D3DCompilerRuntime" Guid="*">
+        <File Source="$(var.AppSourceDir)\D3DCompiler_47_cor3.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="PenImcRuntime" Guid="*">
+        <File Source="$(var.AppSourceDir)\PenImc_cor3.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="PresentationNativeRuntime" Guid="*">
+        <File Source="$(var.AppSourceDir)\PresentationNative_cor3.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="VCRuntime" Guid="*">
+        <File Source="$(var.AppSourceDir)\vcruntime140_cor3.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="WpfGraphicsRuntime" Guid="*">
+        <File Source="$(var.AppSourceDir)\wpfgfx_cor3.dll" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <Component Id="ShortcutComponent" Directory="INSTALLFOLDER" Guid="*">
+      <Shortcut
+        Id="StartMenuShortcut"
+        Directory="ApplicationProgramsFolder"
+        Name="公文 Word 自动排版"
+        Description="打开公文 Word 自动排版工具"
+        Target="[INSTALLFOLDER]GovDocFormatter.exe"
+        WorkingDirectory="INSTALLFOLDER" />
+      <Shortcut
+        Id="DesktopShortcut"
+        Directory="DesktopFolder"
+        Name="公文 Word 自动排版"
+        Description="打开公文 Word 自动排版工具"
+        Target="[INSTALLFOLDER]GovDocFormatter.exe"
+        WorkingDirectory="INSTALLFOLDER" />
+      <RemoveFolder Id="RemoveApplicationProgramsFolder" Directory="ApplicationProgramsFolder" On="uninstall" />
+      <RegistryValue
+        Root="HKCU"
+        Key="Software\GovDocFormatter"
+        Name="Installed"
+        Type="integer"
+        Value="1"
+        KeyPath="yes" />
+    </Component>
+  </Fragment>
+</Wix>

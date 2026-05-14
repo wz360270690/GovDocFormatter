@@ -1,0 +1,27 @@
+# Build output
+bin/
+obj/
+**/bin/
+**/obj/
+
+# Local publish and installer output
+GovDocFormatter/publish-self-contained*/
+Installer/App/
+Installer/Output/
+
+# Local tools/cache
+.tools-wix4/
+
+# Visual Studio and user-local files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+Thumbs.db
+Desktop.ini
