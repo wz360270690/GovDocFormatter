@@ -8,6 +8,7 @@ obj/
 GovDocFormatter/publish-self-contained*/
 Installer/App/
 Installer/Output/
+Dist/
 
 # Local tools/cache
 .tools-wix4/

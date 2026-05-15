@@ -34,6 +34,27 @@ Installer\Output\GovDocFormatterSetup.msi
 .\build-installer.ps1
 ```
 
+## Linux 命令行版
+
+Linux 版为命令行工具，不包含 Windows 图形界面。生成压缩包：
+
+```powershell
+.\build-linux.ps1
+```
+
+产物路径：
+
+```text
+Dist\GovDocFormatter-linux-x64-v1.0.12.tar.gz
+```
+
+Linux 上解压后使用：
+
+```bash
+chmod +x ./GovDocFormatter
+./GovDocFormatter input.docx output.docx
+```
+
 ## 已自动化的规则
 
 - A4 纸张：210mm x 297mm。
