@@ -150,6 +150,12 @@ public sealed partial class GovDocumentFormatter
                 result.Messages.Add($"已将 {normalizedBreaks} 个手动换行片段重组为可识别的公文逻辑段落。");
             }
 
+            var removedPaginationControls = RemovePaginationControls(mainPart.Document.Body);
+            if (removedPaginationControls > 0)
+            {
+                result.Messages.Add($"已清除 {removedPaginationControls} 处原文残留的分页控制。");
+            }
+
             var removedBlankParagraphs = FormatExistingParagraphs(mainPart.Document.Body, options);
             if (removedBlankParagraphs > 0)
             {
@@ -498,6 +504,47 @@ public sealed partial class GovDocumentFormatter
         }
 
         return changed;
+    }
+
+    private static int RemovePaginationControls(Body body)
+    {
+        var removed = 0;
+
+        foreach (var paragraph in body.Elements<Paragraph>().ToList())
+        {
+            var paragraphProperties = paragraph.GetFirstChild<ParagraphProperties>();
+            if (paragraphProperties is not null)
+            {
+                removed += RemoveAllChildrenAndCount<KeepNext>(paragraphProperties);
+                removed += RemoveAllChildrenAndCount<KeepLines>(paragraphProperties);
+                removed += RemoveAllChildrenAndCount<PageBreakBefore>(paragraphProperties);
+                removed += RemoveAllChildrenAndCount<WidowControl>(paragraphProperties);
+            }
+
+            foreach (var pageBreak in paragraph.Descendants<Break>()
+                         .Where(IsManualPageOrColumnBreak)
+                         .ToList())
+            {
+                pageBreak.Remove();
+                removed++;
+            }
+
+            foreach (var renderedPageBreak in paragraph.Descendants<LastRenderedPageBreak>().ToList())
+            {
+                renderedPageBreak.Remove();
+            }
+
+            RemoveEmptyRuns(paragraph);
+        }
+
+        return removed;
+    }
+
+    private static bool IsManualPageOrColumnBreak(Break pageBreak)
+    {
+        var breakType = pageBreak.Type?.Value;
+        return breakType is not null &&
+               (breakType.Equals(BreakValues.Page) || breakType.Equals(BreakValues.Column));
     }
 
     private static List<string> ExtractManualBreakLines(Paragraph paragraph)
@@ -1318,6 +1365,28 @@ public sealed partial class GovDocumentFormatter
     {
         parent.RemoveAllChildren<T>();
         parent.Append(child);
+    }
+
+    private static int RemoveAllChildrenAndCount<T>(OpenXmlCompositeElement parent) where T : OpenXmlElement
+    {
+        var children = parent.Elements<T>().ToList();
+        foreach (var child in children)
+        {
+            child.Remove();
+        }
+
+        return children.Count;
+    }
+
+    private static void RemoveEmptyRuns(Paragraph paragraph)
+    {
+        foreach (var run in paragraph.Descendants<Run>().ToList())
+        {
+            if (run.ChildElements.All(child => child is RunProperties))
+            {
+                run.Remove();
+            }
+        }
     }
 
     private static string NormalizeText(string text)
