@@ -519,6 +519,7 @@ public sealed partial class GovDocumentFormatter
                 removed += RemoveAllChildrenAndCount<KeepLines>(paragraphProperties);
                 removed += RemoveAllChildrenAndCount<PageBreakBefore>(paragraphProperties);
                 removed += RemoveAllChildrenAndCount<WidowControl>(paragraphProperties);
+                removed += RemoveAllChildrenAndCount<SectionProperties>(paragraphProperties);
             }
 
             foreach (var pageBreak in paragraph.Descendants<Break>()

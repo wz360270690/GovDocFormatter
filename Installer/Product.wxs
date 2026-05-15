@@ -3,7 +3,7 @@
   <Package
     Name="公文 Word 自动排版"
     Manufacturer="阿谪talk"
-    Version="1.0.11"
+    Version="1.0.12"
     UpgradeCode="6F59644D-6D08-4F91-B15B-B58C6445232D"
     Scope="perUser">
     <SummaryInformation Description="公文 Word 自动排版安装包" Manufacturer="阿谪talk" />

@@ -6,6 +6,7 @@ public sealed class MainForm : Form
 {
     private const string AuthorName = "阿谪talk";
     private const string WechatQrCodeResourceName = "GovDocFormatter.Assets.wechat-qr.png";
+    private static string AppVersion => typeof(MainForm).Assembly.GetName().Version?.ToString(3) ?? "1.0.12";
 
     private readonly TextBox _inputPathTextBox = SingleLineTextBox();
     private readonly TextBox _outputPathTextBox = SingleLineTextBox();
@@ -92,7 +93,7 @@ public sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "公文 Word 自动排版";
+        Text = "公文 Word 自动排版 v" + AppVersion;
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(980, 720);
         Size = new Size(1080, 780);
@@ -262,8 +263,9 @@ public sealed class MainForm : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 4
+            RowCount = 5
         };
+        panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -276,6 +278,13 @@ public sealed class MainForm : Form
             Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold),
             Margin = new Padding(0, 0, 0, 10)
         }, 0, 0);
+        panel.Controls.Add(new Label
+        {
+            Text = "版本： v" + AppVersion,
+            AutoSize = true,
+            ForeColor = Color.DimGray,
+            Margin = new Padding(0, 0, 0, 10)
+        }, 0, 1);
 
         panel.Controls.Add(new Label
         {
@@ -283,7 +292,7 @@ public sealed class MainForm : Form
             AutoSize = true,
             ForeColor = Color.DimGray,
             Margin = new Padding(0, 0, 0, 8)
-        }, 0, 1);
+        }, 0, 2);
 
         var qrCodePictureBox = new PictureBox
         {
@@ -294,7 +303,7 @@ public sealed class MainForm : Form
             BorderStyle = BorderStyle.FixedSingle,
             MinimumSize = new Size(180, 220)
         };
-        panel.Controls.Add(qrCodePictureBox, 0, 2);
+        panel.Controls.Add(qrCodePictureBox, 0, 3);
 
         panel.Controls.Add(new Label
         {
@@ -304,7 +313,7 @@ public sealed class MainForm : Form
             TextAlign = ContentAlignment.MiddleCenter,
             Anchor = AnchorStyles.None,
             Margin = new Padding(0, 8, 0, 0)
-        }, 0, 3);
+        }, 0, 4);
 
         group.Controls.Add(panel);
         return group;
