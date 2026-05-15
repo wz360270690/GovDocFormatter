@@ -150,7 +150,11 @@ public sealed partial class GovDocumentFormatter
                 result.Messages.Add($"已将 {normalizedBreaks} 个手动换行片段重组为可识别的公文逻辑段落。");
             }
 
-            FormatExistingParagraphs(mainPart.Document.Body, options);
+            var removedBlankParagraphs = FormatExistingParagraphs(mainPart.Document.Body, options);
+            if (removedBlankParagraphs > 0)
+            {
+                result.Messages.Add($"已删除 {removedBlankParagraphs} 个正文中的空段落。");
+            }
         }
 
         if (options.InsertFrontMatter && options.HasFrontMatter)
@@ -388,13 +392,14 @@ public sealed partial class GovDocumentFormatter
         });
     }
 
-    private static void FormatExistingParagraphs(Body body, FormattingOptions options)
+    private static int FormatExistingParagraphs(Body body, FormattingOptions options)
     {
         var titleAlreadyHandled = !string.IsNullOrWhiteSpace(options.Title);
         var mainRecipientAlreadyHandled = !string.IsNullOrWhiteSpace(options.MainRecipient);
         var numberingState = new NumberingState();
+        var removedBlankParagraphs = 0;
 
-        foreach (var paragraph in body.Elements<Paragraph>())
+        foreach (var paragraph in body.Elements<Paragraph>().ToList())
         {
             if (paragraph.Ancestors<Footer>().Any())
             {
@@ -405,7 +410,14 @@ public sealed partial class GovDocumentFormatter
             var text = NormalizeText(paragraph.InnerText);
             if (string.IsNullOrWhiteSpace(text))
             {
-                ApplyParagraphFormat(paragraph, BodyFormat with { FirstLine = 0 });
+                if (HasSectionProperties(paragraph))
+                {
+                    ApplyParagraphFormat(paragraph, BodyFormat with { FirstLine = 0 });
+                    continue;
+                }
+
+                paragraph.Remove();
+                removedBlankParagraphs++;
                 continue;
             }
 
@@ -441,6 +453,8 @@ public sealed partial class GovDocumentFormatter
                 ApplyCharacterRangeRunFormat(paragraph, 0, leadInLength, leadInHeadingFormat);
             }
         }
+
+        return removedBlankParagraphs;
     }
 
     private static int NormalizeManualLineBreakParagraphs(Body body)
@@ -626,18 +640,16 @@ public sealed partial class GovDocumentFormatter
         return new Paragraph(TextRun(text, FontBody, 32));
     }
 
+    private static bool HasSectionProperties(Paragraph paragraph)
+    {
+        return paragraph.GetFirstChild<ParagraphProperties>()?.GetFirstChild<SectionProperties>() is not null;
+    }
+
     private static ParagraphClassification ClassifyParagraph(string text, int? numberingLevel, bool mayBeTitle)
     {
         if (numberingLevel.HasValue)
         {
-            return numberingLevel.Value switch
-            {
-                0 => new ParagraphClassification(Heading1Format, ParagraphKind.Heading1),
-                1 => new ParagraphClassification(Heading2Format, ParagraphKind.Heading2),
-                2 => new ParagraphClassification(Heading3Format, ParagraphKind.Heading3),
-                3 => new ParagraphClassification(Heading3Format, ParagraphKind.Heading4),
-                _ => new ParagraphClassification(BodyFormat, ParagraphKind.Body)
-            };
+            return ClassifyNumberedParagraph(text, numberingLevel.Value);
         }
 
         if (LevelOneHeadingRegex().IsMatch(text))
@@ -650,12 +662,12 @@ public sealed partial class GovDocumentFormatter
             return new ParagraphClassification(Heading2Format, ParagraphKind.Heading2);
         }
 
-        if (LevelThreeHeadingRegex().IsMatch(text))
+        if (LevelThreeHeadingRegex().IsMatch(text) && IsStandaloneNumberedSubheading(text))
         {
             return new ParagraphClassification(Heading3Format, ParagraphKind.Heading3);
         }
 
-        if (LevelFourHeadingRegex().IsMatch(text))
+        if (LevelFourHeadingRegex().IsMatch(text) && IsStandaloneNumberedSubheading(text))
         {
             return new ParagraphClassification(Heading3Format, ParagraphKind.Heading4);
         }
@@ -671,6 +683,68 @@ public sealed partial class GovDocumentFormatter
         }
 
         return new ParagraphClassification(BodyFormat, ParagraphKind.Body);
+    }
+
+    private static ParagraphClassification ClassifyNumberedParagraph(string text, int numberingLevel)
+    {
+        return numberingLevel switch
+        {
+            0 => new ParagraphClassification(Heading1Format, ParagraphKind.Heading1),
+            1 => new ParagraphClassification(Heading2Format, ParagraphKind.Heading2),
+            2 => IsStandaloneNumberedSubheadingText(text)
+                ? new ParagraphClassification(Heading3Format, ParagraphKind.Heading3)
+                : new ParagraphClassification(BodyFormat, ParagraphKind.Body),
+            3 => IsStandaloneNumberedSubheadingText(text)
+                ? new ParagraphClassification(Heading3Format, ParagraphKind.Heading4)
+                : new ParagraphClassification(BodyFormat, ParagraphKind.Body),
+            _ => new ParagraphClassification(BodyFormat, ParagraphKind.Body)
+        };
+    }
+
+    private static bool IsNumberedSubheadingMarker(string text)
+    {
+        return LevelThreeHeadingRegex().IsMatch(text) || LevelFourHeadingRegex().IsMatch(text);
+    }
+
+    private static bool IsStandaloneNumberedSubheading(string text)
+    {
+        return IsStandaloneNumberedSubheadingText(RemoveNumberedSubheadingMarker(text));
+    }
+
+    private static bool IsStandaloneNumberedSubheadingText(string text)
+    {
+        var headingText = NormalizeText(text);
+        return headingText.Length is > 0 and <= 32 &&
+               !ContainsBodyPunctuation(headingText);
+    }
+
+    private static bool IsCompactNumberedLeadInHeading(string text)
+    {
+        var headingText = NormalizeText(RemoveNumberedSubheadingMarker(text)).TrimEnd('。');
+        return headingText.Length is > 0 and <= 24 &&
+               !ContainsBodyPunctuation(headingText);
+    }
+
+    private static string RemoveNumberedSubheadingMarker(string text)
+    {
+        var levelThreeMatch = LevelThreeHeadingRegex().Match(text);
+        if (levelThreeMatch.Success)
+        {
+            return text[levelThreeMatch.Length..];
+        }
+
+        var levelFourMatch = LevelFourHeadingRegex().Match(text);
+        if (levelFourMatch.Success)
+        {
+            return text[levelFourMatch.Length..];
+        }
+
+        return text;
+    }
+
+    private static bool ContainsBodyPunctuation(string text)
+    {
+        return text.IndexOfAny(['，', ',', '。', '；', ';', '：', ':', '、']) >= 0;
     }
 
     private static bool TryGetLeadInHeading(string text, out ParagraphFormat headingFormat, out int headingLength)
@@ -692,6 +766,11 @@ public sealed partial class GovDocumentFormatter
         var headingText = text[..(stopIndex + 1)];
         var remainingText = text[(stopIndex + 1)..].Trim();
         if (headingText.Length > 50 || string.IsNullOrWhiteSpace(remainingText))
+        {
+            return false;
+        }
+
+        if (IsNumberedSubheadingMarker(text) && !IsCompactNumberedLeadInHeading(headingText))
         {
             return false;
         }
